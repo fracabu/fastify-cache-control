@@ -3,6 +3,9 @@
 Declarative HTTP Cache-Control headers management for Fastify with CDN support, presets, and pattern matching.
 
 [![npm version](https://img.shields.io/npm/v/fastify-cache-control.svg)](https://www.npmjs.com/package/fastify-cache-control)
+[![npm downloads](https://img.shields.io/npm/dm/fastify-cache-control.svg)](https://www.npmjs.com/package/fastify-cache-control)
+[![Node.js](https://img.shields.io/node/v/fastify-cache-control.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
