@@ -47,6 +47,213 @@ fastify.get('/', async () => {
 // Response: Cache-Control: public, max-age=3600
 ```
 
+## Real-World Examples
+
+### E-commerce Website
+
+```typescript
+import Fastify from 'fastify'
+import cacheControl from 'fastify-cache-control'
+
+const fastify = Fastify()
+
+await fastify.register(cacheControl, {
+  // Default: pages can be cached for 5 minutes
+  defaults: 'page',
+
+  // URL-based rules
+  rules: [
+    // Static assets (images, CSS, JS with hash in filename)
+    { match: '/assets/*', cache: 'static' },
+
+    // Product images from CDN
+    { match: /\/images\/products\//, cache: { public: true, maxAge: 86400 } },
+
+    // Shopping cart - never cache
+    { match: '/api/cart/*', cache: false },
+
+    // Product catalog - cache briefly
+    { match: '/api/products/*', cache: { public: true, maxAge: 300, staleWhileRevalidate: 60 } },
+
+    // User-specific data
+    { match: '/api/user/*', cache: 'private' }
+  ],
+
+  // CDN caches longer than browsers
+  cdn: {
+    directives: { maxAge: 3600 },
+    header: 'CDN-Cache-Control'
+  }
+})
+
+// Product page - uses default 'page' preset
+fastify.get('/products/:id', async (request) => {
+  const product = await getProduct(request.params.id)
+  return product
+})
+// Response: Cache-Control: public, max-age=3600, must-revalidate
+
+// Checkout - explicitly disable cache
+fastify.get('/checkout', {
+  config: { cache: false }
+}, async (request, reply) => {
+  return { step: 1, items: await getCartItems(request) }
+})
+// Response: Cache-Control: no-store
+```
+
+### REST API with Authentication
+
+```typescript
+await fastify.register(cacheControl, {
+  defaults: 'api',
+  rules: [
+    // Public endpoints - cacheable
+    { match: '/api/v1/public/*', cache: { public: true, maxAge: 300 } },
+
+    // Health check - no cache
+    { match: '/api/health', cache: false },
+
+    // Webhooks - no cache
+    { match: '/api/webhooks/*', cache: false }
+  ]
+})
+
+// Public data - anyone can cache
+fastify.get('/api/v1/public/stats', async () => {
+  return await getPublicStats()
+})
+// Response: Cache-Control: public, max-age=300
+
+// Authenticated endpoint - per-user cache
+fastify.get('/api/v1/me/profile', async (request, reply) => {
+  reply.cacheControl({
+    private: ['authorization'],  // Varies by auth header
+    maxAge: 60,
+    mustRevalidate: true
+  })
+  return await getUserProfile(request.user.id)
+})
+// Response: Cache-Control: private="authorization", max-age=60, must-revalidate
+// Response: Vary: Authorization
+
+// Real-time notifications - never cache
+fastify.get('/api/v1/me/notifications', async (request, reply) => {
+  reply.noCache()
+  return await getNotifications(request.user.id)
+})
+// Response: Cache-Control: no-store
+```
+
+### Static File Server with Versioning
+
+```typescript
+await fastify.register(cacheControl, {
+  rules: [
+    // Versioned assets (e.g., /assets/app.a1b2c3.js) - cache forever
+    {
+      match: /\/assets\/.*\.[a-f0-9]{6,}\.(js|css|woff2?)$/,
+      cache: 'static'  // public, max-age=31536000, immutable
+    },
+
+    // Non-versioned assets - short cache with revalidation
+    {
+      match: '/assets/*',
+      cache: { public: true, maxAge: 3600, mustRevalidate: true }
+    },
+
+    // HTML files - always revalidate
+    {
+      match: /\.html$/,
+      cache: { public: true, noCache: true }
+    }
+  ]
+})
+
+// Serve versioned JS file
+fastify.get('/assets/app.a1b2c3.js', async () => {
+  return await readFile('./dist/app.js')
+})
+// Response: Cache-Control: public, immutable, max-age=31536000
+
+// Serve index.html
+fastify.get('/index.html', async () => {
+  return await readFile('./dist/index.html')
+})
+// Response: Cache-Control: public, no-cache
+```
+
+### Microservice with Cloudflare CDN
+
+```typescript
+await fastify.register(cacheControl, {
+  defaults: { public: true, maxAge: 60, sMaxage: 300 },
+  cdn: {
+    directives: {
+      maxAge: 3600,
+      staleWhileRevalidate: 600,
+      staleIfError: 86400
+    },
+    header: 'Cloudflare-CDN-Cache-Control'
+  }
+})
+
+fastify.get('/api/data', async () => {
+  return await fetchExpensiveData()
+})
+// Response headers:
+// Cache-Control: public, max-age=60, s-maxage=300
+// Cloudflare-CDN-Cache-Control: max-age=3600, stale-while-revalidate=600, stale-if-error=86400
+//
+// Browser: caches for 60s
+// Shared proxies: cache for 300s
+// Cloudflare: caches for 1h, serves stale for 10min while revalidating,
+//             serves stale for 24h if origin is down
+```
+
+### Dynamic Cache Based on Content
+
+```typescript
+fastify.get('/api/posts/:id', async (request, reply) => {
+  const post = await getPost(request.params.id)
+
+  if (post.status === 'published') {
+    // Published posts - cache publicly
+    reply.cacheControl({
+      public: true,
+      maxAge: 3600,
+      staleWhileRevalidate: 300
+    })
+  } else if (post.status === 'draft') {
+    // Drafts - private, short cache
+    reply.cacheControl({
+      private: true,
+      maxAge: 60,
+      mustRevalidate: true
+    })
+  } else {
+    // Deleted/archived - no cache
+    reply.noCache()
+  }
+
+  return post
+})
+```
+
+### Debug Mode for Development
+
+```typescript
+await fastify.register(cacheControl, {
+  defaults: 'page',
+  debug: true,  // Logs cache decisions to console
+  disableInDevelopment: false  // Set to true to skip in NODE_ENV=development
+})
+
+// Console output:
+// [fastify-cache-control] Using default directives
+// [fastify-cache-control] Applied: public, max-age=3600, must-revalidate
+```
+
 ## Options
 
 ```typescript
