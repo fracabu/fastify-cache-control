@@ -459,3 +459,4 @@ import type { CacheControlDirectives, CachePreset } from 'fastify-cache-control'
 ## License
 
 MIT
+
