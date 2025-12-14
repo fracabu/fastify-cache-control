@@ -8,6 +8,12 @@ Declarative HTTP Cache-Control headers management for Fastify with CDN support, 
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Overview
+
+![fastify-cache-control overview](assets/fastify-cache-control-overview.png)
+
+> 🎬 **[Video Demo](#)** - Coming soon
+
 ## Features
 
 - Declarative Cache-Control header management
